@@ -5,64 +5,76 @@
 defmodule Replica do
 def start config, database, monitor do
   receive do
-    {:bind, leaders} -> next config, database, monitor, 1, 1, MapSet.new, Map.new, Map.new, leaders
+    {:bind, leaders} -> next config, database, monitor, 1, 1, [], Map.new, Map.new, leaders
   end
 end
 
 defp next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders do
   receive do
-    { :client_request, c } -> MapSet.put(requests, c)
+    { :client_request, c } ->
+      requests = requests ++ [c]
+      next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
     { :decision, s, c } ->
-      commands = Map.get(decisions, s, [])
-      Map.put(decisions, s, commands ++ [c])
-      commands = Map.get(decisions, s, [])
-      for c <- commands do
-        if Map.has_key?(proposals, slot_out) do
-          proposal = Map.get(proposals, slot_out)
-          requests = if proposal != c do
-            Enum.concat(requests, [proposal])
-          else
-            requests
-          end
-          Map.delete(proposals, slot_out)
-        end
-        perform c, slot_out, decisions, database
-      end
-      propose requests, proposals, decisions, slot_in, slot_out, leaders, 3
+      Map.put(decisions, s, c)
+      {slot_in, slot_out, requests, proposals} = parse_decisions decisions, proposals, requests, slot_in, slot_out, database
+      next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
+    after 0 ->
+      {requests, proposals, slot_in} = propose requests, proposals, decisions, slot_in, slot_out, leaders, 3
+      next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
   end
-  next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
+end
+
+defp parse_decisions decisions, proposals, requests, slot_in, slot_out, database do
+  if Map.has_key?(decisions, slot_out) do
+    decisions_cmd = Map.get(decisions, slot_out)
+    proposal = Map.get(proposals, slot_out)
+    Map.delete(proposals, slot_out)
+    requests = if proposal != decisions_cmd do
+      requests ++ [proposal]
+    else
+      requests
+    end
+    slot_out = perform decisions_cmd, slot_out, decisions, database
+    parse_decisions decisions, proposals, requests, slot_in, slot_out, database
+  else
+    {slot_in, slot_out, requests, proposals}
+  end
 end
 
 defp perform {client, cid, transaction} = cmd, slot_out, decisions, database do
-  if perform_cmd slot_out, cmd, decisions do
+  if not_perform_cmd slot_out, cmd, decisions do
+    nil
+  else
     send database, { :execute, transaction }
     send client, { :reply, cid, 1 } # 1 signifies successful transaction
   end
+  slot_out + 1
 end
 
-defp perform_cmd slot_out, cmd, decisions do
-  should_perform = True
-  for {s, c} <- decisions do
-    if s < slot_out && Enum.member?(c, cmd) do
-      should_perform = False
-    end
-  end
-  should_perform
+defp not_perform_cmd slot_out, cmd, decisions do
+  bools = Enum.map(decisions, fn({s, c}) -> s < slot_out && c == cmd end)
+  Enum.member?(bools, True)
 end
 
 defp propose requests, proposals, decisions, slot_in, slot_out, leaders, window do
-  if slot_in < slot_out + window && not Enum.empty?(MapSet.to_list(requests)) do
-    for c <- MapSet.to_list(requests) do
-      decision = Map.get(decisions, slot_in, [])
-      if Enum.empty?(decision) do
-        requests = MapSet.delete(requests, c)
-        proposals = Map.put(proposals, slot_in, c)
-        for l <- leaders do
-          send l, { :propose, slot_in, c }
-        end
-      end
+  if slot_in < slot_out + window && not Enum.empty?(requests) do
+    {requests, proposals} = propose_requests requests, proposals, decisions, slot_in, leaders
+    propose requests, proposals, decisions, slot_in + 1, slot_out, leaders, window
+  else
+    {requests, proposals, slot_in}
+  end
+end
+
+defp propose_requests requests, proposals, decisions, slot_in, leaders do
+  [c | left_requests] = requests
+  if not Map.has_key?(decisions, slot_in) do
+    proposals = Map.put(proposals, slot_in, c)
+    for l <- leaders do
+      send l, { :propose, slot_in, c }
     end
-    propose requests, proposals, decisions, slot_in+1, slot_out, leaders, window
+    {left_requests, proposals}
+  else
+    {requests, proposals}
   end
 end
 
