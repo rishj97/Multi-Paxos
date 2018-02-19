@@ -23,8 +23,8 @@ def next proposals, active, acceptors, replicas, propose_num, config do
         next proposals, active, acceptors, replicas, propose_num, config
       end
     {:adopted, acc_p, pvals} ->
-      {max_s, max_c} = p_max pvals
-      proposals = Map.put(proposals, max_s, max_c)
+      max_pvals = p_max pvals
+      proposals = get_all_proposals proposals max_pvals
       for  {s, c}  <-  proposals  do
         spawn Commander, :start, [self(), acceptors, replicas, {acc_p, s, c}]
       end
@@ -41,9 +41,26 @@ def next proposals, active, acceptors, replicas, propose_num, config do
 end
 
 def p_max pvals do
-  sorted_pvals = Enum.sort(pvals, fn({p1, _, _}, {p2, _, _}) -> p1 > p2 end)
-  {_, s, c} = Enum.at(sorted_pvals, 0)
-  {s, c}
+  if length(pvals) > 0 do
+    sorted_pvals = Enum.sort(pvals, fn({p1, _, _}, {p2, _, _}) -> p1 >= p2 end)
+    max_p = Enum.at(sorted_pvals, 0)
+    max_pvals = Enum.filter(sorted_pvals, fn({p, _, _}) -> p == max_p end)
+    for {_, s, c} <- max_pvals do
+      {s, c}
+    end
+  else
+    []
+  end
+end
+
+def get_all_proposals list1 list2 do
+  final_list = list2
+  final_list = final_list ++ Enum.filter(list1, fn({s, c}) -> c != lookup list2 s end)
+end
+
+def lookup list elem do
+  map = Map.new(list)
+  Map.get(map, elem)  
 end
 
 def p_greater {r1, l1}, {r2, l2} do
