@@ -41,10 +41,8 @@ def next proposals, active, acceptors, replicas, propose_num, config do
 end
 
 def p_max pvals do
-  {ps, _, _} = Enum.unzip(pvals)
-  max_p = Enum.max(ps)
-  max_elems = Enum.filter(pvals, fn({p,_,_}) -> p == max_p end)
-  {_, s, c} = Enum.at(max_elems, 0)
+  sorted_pvals = Enum.sort(pvals, fn({p1, _, _}, {p2, _, _}) -> p1 > p2 end)
+  {_, s, c} = Enum.at(sorted_pvals, 0)
   {s, c}
 end
 
