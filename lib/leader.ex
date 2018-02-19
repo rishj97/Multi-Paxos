@@ -16,7 +16,7 @@ def next proposals, active, acceptors, replicas, propose_num, config do
   receive do
     {:propose, s, c} ->
       if not Map.has_key?(proposals, s) do
-        proposals = Map.put(proposals, s, c)
+        Map.put(proposals, s, c)
         if active do
           spawn Commander, :start, [self(), acceptors, replicas, {propose_num, s, c}]
         end
@@ -24,7 +24,7 @@ def next proposals, active, acceptors, replicas, propose_num, config do
       end
     {:adopted, acc_p, pvals} ->
       max_pvals = p_max pvals
-      proposals = get_all_proposals proposals max_pvals
+      proposals = Map.merge(proposals, Map.new(max_pvals))
       for  {s, c}  <-  proposals  do
         spawn Commander, :start, [self(), acceptors, replicas, {acc_p, s, c}]
       end
@@ -51,16 +51,6 @@ def p_max pvals do
   else
     []
   end
-end
-
-def get_all_proposals list1 list2 do
-  final_list = list2
-  final_list = final_list ++ Enum.filter(list1, fn({s, c}) -> c != lookup list2 s end)
-end
-
-def lookup list elem do
-  map = Map.new(list)
-  Map.get(map, elem)  
 end
 
 def p_greater {r1, l1}, {r2, l2} do
