@@ -70,7 +70,7 @@ defp propose_requests requests, proposals, decisions, slot_in, leaders do
   if not Map.has_key?(decisions, slot_in) do
     proposals = Map.put(proposals, slot_in, c)
     for l <- leaders do
-      send l, { :propose, slot_in, c }
+      send l, {:propose, slot_in, c}
     end
     {left_requests, proposals}
   else

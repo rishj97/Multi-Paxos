@@ -4,10 +4,10 @@
 
 defmodule Acceptor do
 def start config do
-  next 0, []
+  next 0, [], config
 end
 
-defp next proposal_num, accepted do
+defp next proposal_num, accepted, config do
   receive do
     {:p1a, leader, p} ->
       proposal_num = if p > proposal_num do
@@ -16,7 +16,7 @@ defp next proposal_num, accepted do
         proposal_num
       end
       send leader, {:p1b, self(), proposal_num, accepted}
-      next proposal_num, accepted
+      next proposal_num, accepted, config
     {:p2a, leader, {p, s, c}} ->
       accepted = if p == proposal_num do
         accepted ++ [{p, s, c}]
@@ -24,7 +24,7 @@ defp next proposal_num, accepted do
         accepted
       end
       send leader, {:p2b, self(), proposal_num}
-      next proposal_num, accepted
+      next proposal_num, accepted, config
   end
 end
 end
