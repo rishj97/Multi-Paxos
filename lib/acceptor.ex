@@ -4,7 +4,7 @@
 
 defmodule Acceptor do
 def start config do
-  next 0, [], config
+  next {-1, -1}, [], config
 end
 
 defp next proposal_num, accepted, config do

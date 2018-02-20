@@ -19,7 +19,7 @@ defp next config, database, monitor, slot_in, slot_out, requests, proposals, dec
       {slot_in, slot_out, requests, proposals} = parse_decisions decisions, proposals, requests, slot_in, slot_out, database
       next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
     after 0 ->
-      {requests, proposals, slot_in} = propose requests, proposals, decisions, slot_in, slot_out, leaders, 3
+      {requests, proposals, slot_in} = propose requests, proposals, decisions, slot_in, slot_out, leaders, 1
       next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
   end
 end
@@ -40,6 +40,10 @@ defp parse_decisions decisions, proposals, requests, slot_in, slot_out, database
     {slot_in, slot_out, requests, proposals}
   end
 end
+
+# defp perform nil, slot_out, _, _ do
+#   slot_out
+# end
 
 defp perform {client, cid, transaction} = cmd, slot_out, decisions, database do
   if not_perform_cmd slot_out, cmd, decisions do

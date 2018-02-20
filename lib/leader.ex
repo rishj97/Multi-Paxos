@@ -4,11 +4,11 @@
 
 defmodule Leader do
 def start config do
-  propose_num = {0, self()}
+  propose_num = {0, config.server_num}
   receive do
     {:bind, acceptors, replicas} ->
       spawn Scout, :start, [self(), propose_num, acceptors]
-      next Map.new, false, acceptors, replicas, {0, self()}, config
+      next Map.new, false, acceptors, replicas, propose_num, config
   end
 end
 
@@ -29,11 +29,10 @@ def next proposals, active, acceptors, replicas, propose_num, config do
       end
       next proposals, true, acceptors, replicas, propose_num, config
     {:preempted, {r, l}} ->
-      if p_greater {r, l}, propose_num do
-        active = false
-        propose_num = {r + 1, self()}
+      if {r, l} > propose_num do
+        propose_num = {r + 1, config.server_num}
         spawn Scout, :start, [self(), propose_num, acceptors]
-        next proposals, active, acceptors, replicas, propose_num, config
+        next proposals, false, acceptors, replicas, propose_num, config
       end
   end
 end
@@ -48,14 +47,6 @@ def p_max pvals do
     end
   else
     []
-  end
-end
-
-def p_greater {r1, l1}, {r2, l2} do
-  if r1 != r2 do
-    r1 > r2
-  else
-    l1 > l2
   end
 end
 end
