@@ -4,24 +4,24 @@
 defmodule Scout do
 def start leader, p, acceptors do
   for a <- acceptors do
-    send a, {:p1a, self(), p}
+    send a, { :p1a, self(), p }
   end
   next acceptors, length(acceptors)/2, [], leader, p
 end
 
 defp next wait_for, min_acceptors, pvalues, leader, p do
   receive do
-    {:p1b, a, acc_p, acc_accepted} ->
+    { :p1b, a, acc_p, acc_accepted } ->
       if p == acc_p do
         pvalues = pvalues ++ acc_accepted
         wait_for = List.delete(wait_for, a)
         if length(wait_for) < min_acceptors do
-          send leader, {:adopted, p, pvalues}
+          send leader, { :adopted, p, pvalues }
           Process.exit(self(), :kill)
         end
         next wait_for, min_acceptors, pvalues, leader, p
       else
-        send leader, {:preempted, acc_p}
+        send leader, { :preempted, acc_p }
         Process.exit(self(), :kill)
       end
   end

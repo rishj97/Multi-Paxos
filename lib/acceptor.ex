@@ -9,21 +9,21 @@ end
 
 defp next proposal_num, accepted, config do
   receive do
-    {:p1a, leader, p} ->
+    { :p1a, leader, p } ->
       proposal_num = if p > proposal_num do
         p
       else
         proposal_num
       end
-      send leader, {:p1b, self(), proposal_num, accepted}
+      send leader, { :p1b, self(), proposal_num, accepted }
       next proposal_num, accepted, config
-    {:p2a, leader, {p, s, c}} ->
+    { :p2a, leader, {p, s, c} } ->
       accepted = if p == proposal_num do
         accepted ++ [{p, s, c}]
       else
         accepted
       end
-      send leader, {:p2b, self(), proposal_num}
+      send leader, { :p2b, self(), proposal_num }
       next proposal_num, accepted, config
   end
 end

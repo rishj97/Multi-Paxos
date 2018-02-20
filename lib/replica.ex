@@ -5,14 +5,14 @@
 defmodule Replica do
 def start config, database, monitor do
   receive do
-    {:bind, leaders} -> next config, database, monitor, 1, 1, [], Map.new, Map.new, leaders
+    { :bind, leaders } -> next config, database, monitor, 1, 1, [], Map.new, Map.new, leaders
   end
 end
 
 defp next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders do
   receive do
     { :client_request, c } ->
-      send monitor, {:client_request, config.server_num}
+      send monitor, { :client_request, config.server_num }
       next config, database, monitor, slot_in, slot_out, requests ++ [c], proposals, decisions, leaders
     { :decision, s, c } ->
       decisions = Map.put(decisions, s, c)
@@ -69,7 +69,7 @@ defp propose_requests requests, proposals, decisions, slot_in, leaders do
   if not Map.has_key?(decisions, slot_in) do
     proposals = Map.put(proposals, slot_in, c)
     for l <- leaders do
-      send l, {:propose, slot_in, c}
+      send l, { :propose, slot_in, c }
     end
     {left_requests, proposals}
   else

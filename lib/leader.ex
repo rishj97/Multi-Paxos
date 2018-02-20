@@ -6,7 +6,7 @@ defmodule Leader do
 def start config do
   propose_num = {0, config.server_num}
   receive do
-    {:bind, acceptors, replicas} ->
+    { :bind, acceptors, replicas } ->
       spawn Scout, :start, [self(), propose_num, acceptors]
       next Map.new, false, acceptors, replicas, propose_num, config
   end
@@ -14,7 +14,7 @@ end
 
 def next proposals, active, acceptors, replicas, propose_num, config do
   receive do
-    {:propose, s, c} ->
+    { :propose, s, c } ->
       proposals = if not Map.has_key?(proposals, s) do
         if active do
           spawn Commander, :start, [self(), acceptors, replicas, {propose_num, s, c}]
@@ -24,14 +24,15 @@ def next proposals, active, acceptors, replicas, propose_num, config do
         proposals
       end
       next proposals, active, acceptors, replicas, propose_num, config
-    {:adopted, acc_p, pvals} ->
+    { :adopted, acc_p, pvals } ->
       proposals = Map.merge(proposals, Map.new(p_max pvals))
       for {s, c} <- proposals do
         spawn Commander, :start, [self(), acceptors, replicas, {acc_p, s, c}]
       end
       next proposals, true, acceptors, replicas, propose_num, config
-    {:preempted, {r, l}} ->
+    { :preempted, {r, l} } ->
       if {r, l} > propose_num do
+        # Process.sleep DAC.random(100)
         propose_num = {r + 1, config.server_num}
         spawn Scout, :start, [self(), propose_num, acceptors]
         next proposals, false, acceptors, replicas, propose_num, config
