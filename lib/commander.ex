@@ -9,7 +9,8 @@ def start leader, acceptors, replicas, cmd do
   next acceptors, length(acceptors)/2, leader, cmd, replicas
 end
 
-defp next wait_for, min_acceptors, leader, {p, s, c} = cmd, replicas do
+defp next wait_for, min_acceptors, leader, cmd, replicas do
+  {p, s, c} = cmd
   receive do
     {:p2b, a, acc_p} ->
       if p == acc_p do

@@ -41,23 +41,18 @@ defp parse_decisions decisions, proposals, requests, slot_in, slot_out, database
   end
 end
 
-# defp perform nil, slot_out, _, _ do
-#   slot_out
-# end
-
-defp perform {client, cid, transaction} = cmd, slot_out, decisions, database do
-  if not_perform_cmd slot_out, cmd, decisions do
-    nil
-  else
+defp perform cmd, slot_out, decisions, database do
+  {client, cid, transaction} = cmd
+  if perform_cmd slot_out, cmd, decisions do
     send database, { :execute, transaction }
     send client, { :reply, cid, 1 } # 1 signifies successful transaction
   end
   slot_out + 1
 end
 
-defp not_perform_cmd slot_out, cmd, decisions do
+defp perform_cmd slot_out, cmd, decisions do
   bools = Enum.map(decisions, fn({s, c}) -> s < slot_out && c == cmd end)
-  Enum.member?(bools, true)
+  not Enum.member?(bools, true)
 end
 
 defp propose requests, proposals, decisions, slot_in, slot_out, leaders, window do

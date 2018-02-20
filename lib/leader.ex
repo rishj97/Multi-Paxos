@@ -15,13 +15,15 @@ end
 def next proposals, active, acceptors, replicas, propose_num, config do
   receive do
     {:propose, s, c} ->
-      if not Map.has_key?(proposals, s) do
-        proposals = Map.put(proposals, s, c)
+      proposals = if not Map.has_key?(proposals, s) do
         if active do
           spawn Commander, :start, [self(), acceptors, replicas, {propose_num, s, c}]
         end
-        next proposals, active, acceptors, replicas, propose_num, config
+        Map.put(proposals, s, c)
+      else
+        proposals
       end
+      next proposals, active, acceptors, replicas, propose_num, config
     {:adopted, acc_p, pvals} ->
       proposals = Map.merge(proposals, Map.new(p_max pvals))
       for {s, c} <- proposals do
