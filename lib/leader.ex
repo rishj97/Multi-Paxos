@@ -32,7 +32,7 @@ def next proposals, active, acceptors, replicas, propose_num, config do
       next proposals, true, acceptors, replicas, propose_num, config
     { :preempted, {r, l} } ->
       if {r, l} > propose_num do
-        # Process.sleep DAC.random(100)
+        # Process.sleep DAC.random(10) # Sleep randomly to avoid livelocks
         propose_num = {r + 1, config.server_num}
         spawn Scout, :start, [self(), propose_num, acceptors]
         next proposals, false, acceptors, replicas, propose_num, config
