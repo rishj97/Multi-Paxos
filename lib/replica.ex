@@ -13,7 +13,7 @@ defp next config, database, monitor, slot_in, slot_out, requests, proposals, dec
   receive do
     { :client_request, c } ->
       send monitor, { :client_request, config.server_num }
-      next config, database, monitor, slot_in, slot_out, requests ++ [c], proposals, decisions, leaders
+      next config, database, monitor, slot_in, slot_out, [c | requests], proposals, decisions, leaders
     { :decision, s, c } ->
       decisions = Map.put(decisions, s, c)
       {slot_in, slot_out, requests, proposals} = parse_decisions decisions, proposals, requests, slot_in, slot_out, database
