@@ -12,10 +12,10 @@ end
 defp next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders do
   receive do
     { :client_request, c } ->
-      requests = requests ++ [c]
-      next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
+      send monitor, {:client_request, config.server_num}
+      next config, database, monitor, slot_in, slot_out, requests ++ [c], proposals, decisions, leaders
     { :decision, s, c } ->
-      Map.put(decisions, s, c)
+      decisions = Map.put(decisions, s, c)
       {slot_in, slot_out, requests, proposals} = parse_decisions decisions, proposals, requests, slot_in, slot_out, database
       next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
     after 0 ->
@@ -28,7 +28,7 @@ defp parse_decisions decisions, proposals, requests, slot_in, slot_out, database
   if Map.has_key?(decisions, slot_out) do
     decisions_cmd = Map.get(decisions, slot_out)
     proposal = Map.get(proposals, slot_out)
-    Map.delete(proposals, slot_out)
+    proposals = Map.delete(proposals, slot_out)
     requests = if proposal != decisions_cmd do
       requests ++ [proposal]
     else
@@ -57,7 +57,7 @@ defp not_perform_cmd slot_out, cmd, decisions do
 end
 
 defp propose requests, proposals, decisions, slot_in, slot_out, leaders, window do
-  if slot_in < slot_out + window && not Enum.empty?(requests) do
+  if slot_in < (slot_out + window) && not Enum.empty?(requests) do
     {requests, proposals} = propose_requests requests, proposals, decisions, slot_in, leaders
     propose requests, proposals, decisions, slot_in + 1, slot_out, leaders, window
   else
