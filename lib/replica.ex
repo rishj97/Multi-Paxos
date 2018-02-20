@@ -19,7 +19,7 @@ defp next config, database, monitor, slot_in, slot_out, requests, proposals, dec
       {slot_in, slot_out, requests, proposals} = parse_decisions decisions, proposals, requests, slot_in, slot_out, database
       next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
     after 0 ->
-      {requests, proposals, slot_in} = propose requests, proposals, decisions, slot_in, slot_out, leaders, 1
+      {requests, proposals, slot_in} = propose requests, proposals, decisions, slot_in, slot_out, leaders, config.window_size
       next config, database, monitor, slot_in, slot_out, requests, proposals, decisions, leaders
   end
 end
@@ -30,7 +30,7 @@ defp parse_decisions decisions, proposals, requests, slot_in, slot_out, database
     proposal = Map.get(proposals, slot_out)
     proposals = Map.delete(proposals, slot_out)
     requests = if proposal != decisions_cmd && proposal do
-      requests ++ [proposal]
+      [proposal | requests]
     else
       requests
     end

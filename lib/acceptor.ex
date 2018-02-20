@@ -19,7 +19,7 @@ defp next proposal_num, accepted, config do
       next proposal_num, accepted, config
     { :p2a, leader, {p, s, c} } ->
       accepted = if p == proposal_num do
-        accepted ++ [{p, s, c}]
+        [{p, s, c} | accepted]
       else
         accepted
       end
