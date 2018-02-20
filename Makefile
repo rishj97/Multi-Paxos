@@ -3,8 +3,8 @@
 # coursework 2, paxos made moderately complex
 # Makefile, v2
 
-SERVERS = 2
-CLIENTS = 1
+SERVERS = 3
+CLIENTS = 2
 
 CONFIG  = 1
 

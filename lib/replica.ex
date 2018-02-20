@@ -29,7 +29,7 @@ defp parse_decisions decisions, proposals, requests, slot_in, slot_out, database
     decisions_cmd = Map.get(decisions, slot_out)
     proposal = Map.get(proposals, slot_out)
     proposals = Map.delete(proposals, slot_out)
-    requests = if proposal != decisions_cmd do
+    requests = if proposal != decisions_cmd && proposal do
       requests ++ [proposal]
     else
       requests
