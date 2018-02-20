@@ -16,20 +16,18 @@ def next proposals, active, acceptors, replicas, propose_num, config do
   receive do
     {:propose, s, c} ->
       if not Map.has_key?(proposals, s) do
-        Map.put(proposals, s, c)
+        proposals = Map.put(proposals, s, c)
         if active do
           spawn Commander, :start, [self(), acceptors, replicas, {propose_num, s, c}]
         end
         next proposals, active, acceptors, replicas, propose_num, config
       end
     {:adopted, acc_p, pvals} ->
-      max_pvals = p_max pvals
-      proposals = Map.merge(proposals, Map.new(max_pvals))
-      for  {s, c}  <-  proposals  do
+      proposals = Map.merge(proposals, Map.new(p_max pvals))
+      for {s, c} <- proposals do
         spawn Commander, :start, [self(), acceptors, replicas, {acc_p, s, c}]
       end
-      active = true
-      next proposals, active, acceptors, replicas, propose_num, config
+      next proposals, true, acceptors, replicas, propose_num, config
     {:preempted, {r, l}} ->
       if p_greater {r, l}, propose_num do
         active = false

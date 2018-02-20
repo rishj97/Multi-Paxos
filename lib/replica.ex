@@ -53,7 +53,7 @@ end
 
 defp not_perform_cmd slot_out, cmd, decisions do
   bools = Enum.map(decisions, fn({s, c}) -> s < slot_out && c == cmd end)
-  Enum.member?(bools, True)
+  Enum.member?(bools, true)
 end
 
 defp propose requests, proposals, decisions, slot_in, slot_out, leaders, window do
