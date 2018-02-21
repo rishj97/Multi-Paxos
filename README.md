@@ -25,3 +25,12 @@ make ssh_down	- kill nodes on real network (omitted)
 make ssh_show	- show running nodes on real network (omitted)
 
 
+---- CONFIG VARIABLES ----
+In configuration.ex extra config variables added are: 
+    leader_sleep - boolean control for 'random wait' livelock prevention algorithm
+
+    livelock_prevention - boolean control for 'leader wait' livelock prevention algorithm
+
+    rand_sleep_max - max time to sleep when avoiding livelocks by random sleeps (in milliseconds)
+
+    leader_resp_wait_time - time leader waits for a leader_resp response (in milliseconds)

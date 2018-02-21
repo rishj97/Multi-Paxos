@@ -17,25 +17,22 @@ def version 1 do	# configuration 1
 
   print_after:  1_000,	# print transaction log summary every print_after msecs
 
-  monitor_livelocks: false,
+  leader_sleep: false,  # boolean control for 'random wait' livelock prevention algorithm
+
+  monitor_livelocks: false,  # boolean control for another 'random wait' livelock prevention algorithm
   check_livelock_interval: 50,
 
-  leader_sleep: false,
+  livelock_prevention: true,  # boolean control for 'leader wait' livelock prevention algorithm
 
-  livelock_prevention: true,
+  rand_sleep_max: 100,  # max time to sleep when avoiding livelocks by random sleeps (in milliseconds)
 
-  rand_sleep_max: 100,
-
-  leader_resp_wait_time: 10
+  leader_resp_wait_time: 10  # time leader waits for a leader_resp response (in milliseconds)
   }
 end
 
 def version 2 do	# same as version 1 with higher debug level
  config = version 1
  Map.put config, :debug_level, 1
-end
-
-def version 3 do	# configuration 3
 end
 
 end # module -----------------------
