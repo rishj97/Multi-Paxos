@@ -33,8 +33,8 @@ def next proposals, active, acceptors, replicas, propose_num, config, sleep_rand
       end
       next proposals, true, acceptors, replicas, propose_num, config, sleep_random
     { :preempted, {r, l} } ->
-      sleep_random = if sleep_random do
-        Process.sleep DAC.random(100) # Sleep randomly to avoid livelocks
+      sleep_random = if config.leader_sleep or sleep_random do
+        Process.sleep DAC.random config.rand_sleep_max # Sleep randomly to avoid livelocks
         false
       end
       if {r, l} > propose_num do

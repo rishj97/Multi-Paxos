@@ -1,4 +1,4 @@
-
+# Rishabh Jain(rj2315) & Vinamra Agrawal(va1215)
 # distributed algorithms, n.dulay 2 feb 18
 # coursework 2, paxos made moderately complex
 
@@ -8,7 +8,9 @@ def start config do
   receive do
     {:leaders, leaders} ->
       Process.send_after self(), :print, config.print_after
-      Process.send_after self(), {:check_livelock, nil, leaders}, config.check_livelock
+      if config.monitor_livelocks do
+        Process.send_after self(), { :check_livelock, nil, leaders }, config.check_livelock_interval
+      end
       next config, 0, Map.new, Map.new, Map.new
   end
 
@@ -61,14 +63,13 @@ defp next config, clock, requests, updates, transactions do
     next config, clock, requests, updates, transactions
 
   {:check_livelock, sorted_last, leaders} ->
-    clock = clock + config.check_livelock
     sorted = updates |> Map.to_list |> List.keysort(0)
     if sorted_last == sorted do
       for leader <- leaders do
         send leader, { :sleep_random }
       end
     end
-    Process.send_after self(), { :check_livelock, sorted, leaders }, config.check_livelock
+    Process.send_after self(), { :check_livelock, sorted, leaders }, config.check_livelock_interval
     next config, clock, requests, updates, transactions
 
   # ** ADD ADDITIONAL MESSAGES HERE

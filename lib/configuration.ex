@@ -1,4 +1,4 @@
-
+# Rishabh Jain(rj2315) & Vinamra Agrawal(va1215)
 # distributed algorithms, n.dulay, 2 feb 18
 # multi-paxos, configuration parameters v1
 
@@ -16,8 +16,14 @@ def version 1 do	# configuration 1
   max_amount:   1000,	# max amount moved between accounts
 
   print_after:  1_000,	# print transaction log summary every print_after msecs
-  check_livelock: 50
-  # add your own here
+
+  monitor_livelocks: false,
+  check_livelock_interval: 50,
+
+  leader_sleep: true,
+
+  rand_sleep_max: 100
+
   }
 end
 
