@@ -2,7 +2,10 @@
 # distributed algorithms, n.dulay 2 feb 18
 # coursework 2, paxos made moderately complex
 defmodule Scout do
-def start leader, p, acceptors do
+def start leader, p, acceptors, config, monitor do
+  if config.debug_level == 1 do
+    send monitor, { :scout_spawned }
+  end
   for a <- acceptors do
     send a, { :p1a, self(), p }
   end

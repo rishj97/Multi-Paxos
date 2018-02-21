@@ -2,7 +2,10 @@
 # distributed algorithms, n.dulay 2 feb 18
 # coursework 2, paxos made moderately complex
 defmodule Commander do
-def start leader, acceptors, replicas, cmd do
+def start leader, acceptors, replicas, cmd, config, monitor do
+  if config.debug_level == 1 do
+    send monitor, { :commander_spawned }
+  end
   for a <- acceptors do
     send a, { :p2a, self(), cmd }
   end

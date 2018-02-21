@@ -28,7 +28,7 @@ defp start config do
   send monitor, {:leaders, leaders}
 
   for replica <- replicas, do: send replica, { :bind, leaders }
-  for leader  <- leaders,  do: send leader,  { :bind, acceptors, replicas, leaders }
+  for leader  <- leaders,  do: send leader,  { :bind, acceptors, replicas, leaders, monitor }
 
   for c <- 1 .. config.n_clients do
     node_name = DAC.node_name config.setup, "client", c

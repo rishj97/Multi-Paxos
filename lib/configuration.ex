@@ -22,9 +22,11 @@ def version 1 do	# configuration 1
 
   leader_sleep: false,
 
+  livelock_prevention: true,
+
   rand_sleep_max: 100,
 
-  leader_resp_wait_time: 20
+  leader_resp_wait_time: 10
   }
 end
 
