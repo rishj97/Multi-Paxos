@@ -8,12 +8,14 @@ def start config do
   receive do
     { :bind, acceptors, replicas } ->
       spawn Scout, :start, [self(), propose_num, acceptors]
-      next Map.new, false, acceptors, replicas, propose_num, config
+      next Map.new, false, acceptors, replicas, propose_num, config, false
   end
 end
 
-def next proposals, active, acceptors, replicas, propose_num, config do
+def next proposals, active, acceptors, replicas, propose_num, config, sleep_random do
   receive do
+    { :sleep_random } ->
+      next proposals, active, acceptors, replicas, propose_num, config, true
     { :propose, s, c } ->
       proposals = if not Map.has_key?(proposals, s) do
         if active do
@@ -23,21 +25,24 @@ def next proposals, active, acceptors, replicas, propose_num, config do
       else
         proposals
       end
-      next proposals, active, acceptors, replicas, propose_num, config
+      next proposals, active, acceptors, replicas, propose_num, config, sleep_random
     { :adopted, acc_p, pvals } ->
       proposals = Map.merge(proposals, Map.new(p_max pvals))
       for {s, c} <- proposals do
         spawn Commander, :start, [self(), acceptors, replicas, {acc_p, s, c}]
       end
-      next proposals, true, acceptors, replicas, propose_num, config
+      next proposals, true, acceptors, replicas, propose_num, config, sleep_random
     { :preempted, {r, l} } ->
-      Process.sleep DAC.random(100) # Sleep randomly to avoid livelocks
+      sleep_random = if sleep_random do
+        Process.sleep DAC.random(100) # Sleep randomly to avoid livelocks
+        false
+      end
       if {r, l} > propose_num do
         propose_num = {r + 1, config.server_num}
         spawn Scout, :start, [self(), propose_num, acceptors]
-        next proposals, false, acceptors, replicas, propose_num, config
+        next proposals, false, acceptors, replicas, propose_num, config, sleep_random
       else
-        next proposals, active, acceptors, replicas, propose_num, config
+        next proposals, active, acceptors, replicas, propose_num, config, sleep_random
       end
   end
 end

@@ -5,8 +5,14 @@
 defmodule Monitor do
 
 def start config do
-  Process.send_after self(), :print, config.print_after
-  next config, 0, Map.new, Map.new, Map.new
+  receive do
+    {:leaders, leaders} ->
+      Process.send_after self(), :print, config.print_after
+      Process.send_after self(), {:check_livelock, nil, leaders}, config.check_livelock
+      next config, 0, Map.new, Map.new, Map.new
+  end
+
+
 end # start
 
 defp next config, clock, requests, updates, transactions do
@@ -18,34 +24,34 @@ defp next config, clock, requests, updates, transactions do
 
     if seqnum != done + 1  do
       IO.puts "  ** error db #{db}: seq #{seqnum} expecting #{done+1}"
-      System.halt 
+      System.halt
     end
 
-    transactions = 
+    transactions =
       case Map.get transactions, seqnum do
       nil ->
         # IO.puts "db #{db} seq #{seqnum} #{done}"
-        Map.put transactions, seqnum, %{ amount: amount, from: from, to: to }   
+        Map.put transactions, seqnum, %{ amount: amount, from: from, to: to }
 
       t -> # already logged - check transaction
         if amount != t.amount or from != t.from or to != t.to do
 	  IO.puts " ** error db #{db}.#{done} [#{amount},#{from},#{to}] " <>
             "= log #{done}/#{Map.size transactions} [#{t.amount},#{t.from},#{t.to}]"
-          System.halt 
+          System.halt
         end
         transactions
       end # case
 
-    updates = Map.put updates, db, seqnum 
+    updates = Map.put updates, db, seqnum
     next config, clock, requests, updates, transactions
-      
+
   { :client_request, server_num } ->  # requests by replica
     seen = Map.get requests, server_num, 0
     requests = Map.put requests, server_num, seen + 1
-    next config, clock, requests, updates, transactions 
+    next config, clock, requests, updates, transactions
 
-  :print -> 
-    clock = clock + config.print_after 
+  :print ->
+    clock = clock + config.print_after
     sorted = updates |> Map.to_list |> List.keysort(0)
     IO.puts "time = #{clock}  updates done = #{inspect sorted}"
     sorted = requests |> Map.to_list |> List.keysort(0)
@@ -54,13 +60,23 @@ defp next config, clock, requests, updates, transactions do
     Process.send_after self(), :print, config.print_after
     next config, clock, requests, updates, transactions
 
+  {:check_livelock, sorted_last, leaders} ->
+    clock = clock + config.check_livelock
+    sorted = updates |> Map.to_list |> List.keysort(0)
+    if sorted_last == sorted do
+      for leader <- leaders do
+        send leader, { :sleep_random }
+      end
+    end
+    Process.send_after self(), { :check_livelock, sorted, leaders }, config.check_livelock
+    next config, clock, requests, updates, transactions
+
   # ** ADD ADDITIONAL MESSAGES HERE
 
-  _ -> 
+  _ ->
     IO.puts "monitor: unexpected message"
     System.halt
   end # receive
 end # next
 
 end # Monitor
-
