@@ -20,10 +20,11 @@ def version 1 do	# configuration 1
   monitor_livelocks: false,
   check_livelock_interval: 50,
 
-  leader_sleep: true,
+  leader_sleep: false,
 
-  rand_sleep_max: 100
+  rand_sleep_max: 100,
 
+  leader_resp_wait_time: 20
   }
 end
 

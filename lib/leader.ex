@@ -6,16 +6,16 @@ defmodule Leader do
 def start config do
   propose_num = {0, config.server_num}
   receive do
-    { :bind, acceptors, replicas } ->
+    { :bind, acceptors, replicas, leaders } ->
       spawn Scout, :start, [self(), propose_num, acceptors]
-      next Map.new, false, acceptors, replicas, propose_num, config, false
+      next Map.new, false, acceptors, replicas, propose_num, config, false, leaders
   end
 end
 
-def next proposals, active, acceptors, replicas, propose_num, config, sleep_random do
+def next proposals, active, acceptors, replicas, propose_num, config, sleep_random, leaders do
   receive do
     { :sleep_random } ->
-      next proposals, active, acceptors, replicas, propose_num, config, true
+      next proposals, active, acceptors, replicas, propose_num, config, true, leaders
     { :propose, s, c } ->
       proposals = if not Map.has_key?(proposals, s) do
         if active do
@@ -25,25 +25,48 @@ def next proposals, active, acceptors, replicas, propose_num, config, sleep_rand
       else
         proposals
       end
-      next proposals, active, acceptors, replicas, propose_num, config, sleep_random
+      next proposals, active, acceptors, replicas, propose_num, config, sleep_random, leaders
     { :adopted, acc_p, pvals } ->
       proposals = Map.merge(proposals, Map.new(p_max pvals))
       for {s, c} <- proposals do
         spawn Commander, :start, [self(), acceptors, replicas, {acc_p, s, c}]
       end
-      next proposals, true, acceptors, replicas, propose_num, config, sleep_random
+      next proposals, true, acceptors, replicas, propose_num, config, sleep_random, leaders
     { :preempted, {r, l} } ->
       sleep_random = if config.leader_sleep or sleep_random do
         Process.sleep DAC.random config.rand_sleep_max # Sleep randomly to avoid livelocks
         false
       end
       if {r, l} > propose_num do
-        propose_num = {r + 1, config.server_num}
-        spawn Scout, :start, [self(), propose_num, acceptors]
-        next proposals, false, acceptors, replicas, propose_num, config, sleep_random
+        # If {r, l} is bigger than our current proposal number, we check with the
+        # leading proposal number leader if it is active before increasing our proposal number
+        # to avoid livelocks.
+        for leader <- leaders do
+          send leader, { :waiting, self(), l }
+        end
+        # Wait for the other leader's response
+        receive do
+          { :leader_resp } ->
+            # Incase the leading leader responds, we dont change our proposal number.
+            send self(), { :preempted, {r, l} }
+            next proposals, active, acceptors, replicas, propose_num, config, sleep_random, leaders
+        after config.leader_resp_wait_time ->
+          # Incase of no response, we go about normally increasing our proposal number and spawning
+          # our scout to start proposing.
+          propose_num = {r + 1, config.server_num}
+          spawn Scout, :start, [self(), propose_num, acceptors]
+          next proposals, false, acceptors, replicas, propose_num, config, sleep_random, leaders
+        end
       else
-        next proposals, active, acceptors, replicas, propose_num, config, sleep_random
+        next proposals, active, acceptors, replicas, propose_num, config, sleep_random, leaders
       end
+    { :waiting, waiting_leader, waiting_on } ->
+      if active and waiting_on == config.server_num do
+        # If the leader is the one the waiting leader is waiting on and is active, we send a
+        # response to the waiting leader, to tell it to wait.
+        send waiting_leader, { :leader_resp }
+      end
+      next proposals, active, acceptors, replicas, propose_num, config, sleep_random, leaders
   end
 end
 
